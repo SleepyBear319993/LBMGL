@@ -10,6 +10,13 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
+// Force the use of the NVIDIA GPU
+#ifdef _WIN32
+extern "C" {
+    __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+}
+#endif
+
 //-----------------------------------------------------
 // Lattice parameters and simulation constants
 //-----------------------------------------------------
@@ -292,19 +299,19 @@ void simulation_step() {
     dim3 blockDim(8, 8);
     dim3 gridDim((nx + blockDim.x - 1) / blockDim.x, (ny + blockDim.y - 1) / blockDim.y);
 
-    collision_kernel << <gridDim, blockDim >> > (d_f, omega, nx, ny);
+    collision_kernel <<<gridDim,blockDim>>> (d_f, omega, nx, ny);
     cudaDeviceSynchronize();
 
-    streaming_kernel << <gridDim, blockDim >> > (d_f, d_f_new, nx, ny);
+    streaming_kernel <<<gridDim,blockDim>>> (d_f, d_f_new, nx, ny);
     cudaDeviceSynchronize();
 
-    bounce_back_kernel << <gridDim, blockDim >> > (d_f_new, d_mask, nx, ny);
+    bounce_back_kernel <<<gridDim,blockDim>>> (d_f_new, d_mask, nx, ny);
     cudaDeviceSynchronize();
 
     // Apply moving lid
     dim3 blockDim1(256);
     dim3 gridDim1((nx + blockDim1.x - 1) / blockDim1.x);
-    moving_lid_kernel << <gridDim1, blockDim1 >> > (d_f_new, nx, ny, U);
+    moving_lid_kernel <<<gridDim1,blockDim1>>> (d_f_new, nx, ny, U);
     cudaDeviceSynchronize();
 
     // Swap pointers
@@ -421,6 +428,10 @@ void initGL(int* argc, char** argv) {
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowSize(WIN_WIDTH, WIN_HEIGHT);
     glutCreateWindow("LBM + OpenGL Visualization");
+
+    printf("OpenGL version: %s\n", glGetString(GL_VERSION));
+    printf("OpenGL vendor: %s\n", glGetString(GL_VENDOR));
+    printf("OpenGL renderer: %s\n", glGetString(GL_RENDERER));
 
     // (Optional) Init GLEW
     GLenum err = glewInit();
