@@ -22,8 +22,17 @@ A GPU-accelerated Lattice Boltzmann Method (LBM) simulation with real-time OpenG
    - Install the toolkit with Visual Studio integration
    - Ensure that CUDA Toolkit 12.4 or higher is installed to be compatible with Visual Studio 2022 17.10 or higher
 
-3. **GLEW (OpenGL Extension Wrangler)**
-   - Download from: http://glew.sourceforge.net/
+3. **GLEW and FreeGLUT**
+   
+   Install GLEW and FreeGLUT by vcpkg:
 
-4. **FreeGLUT**
-   - Download from: https://www.transmissionzero.co.uk/software/freeglut-devel/
+     `git clone https://github.com/Microsoft/vcpkg.git`
+     
+     `.\vcpkg\bootstrap-vcpkg.bat`
+   
+     `vcpkg integrate install`
+   
+     `vcpkg install glew:x64-windows`
+   
+     `vcpkg install freeglut:x64-windows`
+   
