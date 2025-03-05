@@ -10,6 +10,16 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
+#include <string>
+#include <sstream>
+
+// Time info
+int currentStep = 0;
+std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
+float updatesPerSecond = 0.0f;
+float mlups = 0.0f;
+
+
 // Force the use of the NVIDIA GPU
 #ifdef _WIN32
 extern "C" {
@@ -41,8 +51,8 @@ DTYPE w[9] = {
     1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f
 };
 
-DTYPE U = 0.5f;
-DTYPE Re = 2000.0f;
+DTYPE U = 0.4f;
+DTYPE Re = 7000.0f;
 DTYPE nu, omega;  // nu = 3*(U*nx/Re)+0.5; omega = 1/nu
 
 // Simulation arrays (device pointers)
@@ -148,15 +158,21 @@ __global__ void moving_lid_kernel(DTYPE* f, int nx, int ny, DTYPE U) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < nx) {
         int j = ny - 2;
-        DTYPE rho = f[idx(i, j, 0, nx, ny)] + f[idx(i, j, 1, nx, ny)] + f[idx(i, j, 3, nx, ny)]
-            + 2.0f * (f[idx(i, j, 2, nx, ny)] + f[idx(i, j, 5, nx, ny)] + f[idx(i, j, 6, nx, ny)]);
-            f[idx(i, j, 4, nx, ny)] = f[idx(i, j, 2, nx, ny)];
-            f[idx(i, j, 7, nx, ny)] = f[idx(i, j, 5, nx, ny)]
-                + 0.5f * (f[idx(i, j, 1, nx, ny)] - f[idx(i, j, 3, nx, ny)])
-                    - 0.5f * rho * U;
-                f[idx(i, j, 8, nx, ny)] = f[idx(i, j, 6, nx, ny)]
-                    - 0.5f * (f[idx(i, j, 1, nx, ny)] - f[idx(i, j, 3, nx, ny)])
-                        + 0.5f * rho * U;
+        // Zou-He velocity BC
+        //DTYPE rho = f[idx(i, j, 0, nx, ny)] + f[idx(i, j, 1, nx, ny)] + f[idx(i, j, 3, nx, ny)]
+        //    + 2.0f * (f[idx(i, j, 2, nx, ny)] + f[idx(i, j, 5, nx, ny)] + f[idx(i, j, 6, nx, ny)]);
+        //    f[idx(i, j, 4, nx, ny)] = f[idx(i, j, 2, nx, ny)];
+        //    f[idx(i, j, 7, nx, ny)] = f[idx(i, j, 5, nx, ny)]
+        //        + 0.5f * (f[idx(i, j, 1, nx, ny)] - f[idx(i, j, 3, nx, ny)])
+        //            - 0.5f * rho * U;
+        //        f[idx(i, j, 8, nx, ny)] = f[idx(i, j, 6, nx, ny)]
+        //            - 0.5f * (f[idx(i, j, 1, nx, ny)] - f[idx(i, j, 3, nx, ny)])
+        //                + 0.5f * rho * U;
+
+		// Mid-grid velocity BC
+		f[idx(i, j, 4, nx, ny)] = f[idx(i, j, 2, nx, ny)];
+		f[idx(i, j, 7, nx, ny)] = f[idx(i, j, 5, nx, ny)] - DTYPE(1.0) / DTYPE(6.0) * U;
+		f[idx(i, j, 8, nx, ny)] = f[idx(i, j, 6, nx, ny)] + DTYPE(1.0) / DTYPE(6.0) * U;
     }
 }
 
@@ -375,9 +391,15 @@ void cleanup() {
 // redraw the screen.
 //-----------------------------------------------------
 void display() {
-    // 1) Run a few LBM time steps
+    // 0) Record start time
+    if (currentStep == 0) {
+        startTime = std::chrono::high_resolution_clock::now();
+    }
+
+    // 1) Run LBM time steps
     for (int s = 0; s < stepsPerFrame; s++) {
         simulation_step();
+		currentStep++;
     }
 
     // 2) Compute velocity field on GPU
@@ -407,7 +429,23 @@ void display() {
     glDrawPixels(WIN_WIDTH, WIN_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, 0);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-    // 7) Swap buffers
+    // 8) Compute and display time step, update per second, and MLUPS
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<float> elapsedTime = currentTime - startTime;
+    updatesPerSecond = float(currentStep) / elapsedTime.count();
+    mlups = (float(currentStep) * float(nx) * float(ny)) / (elapsedTime.count() * float(1e6));
+
+    std::ostringstream oss;
+    oss << "Time Step: " << currentStep << "    UPS: " << std::fixed << std::setprecision(1) << updatesPerSecond << "    MLUPS: " << std::fixed << std::setprecision(2) << mlups;
+    std::string info = oss.str();
+
+	glColor3f(1.0f, 1.0f, 1.0f); // white text
+	glRasterPos2f(-0.95f, 0.95f); // lower-right corner
+    for (char c : info) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+    }
+
+    // 9) Swap buffers
     glutSwapBuffers();
 }
 
@@ -450,6 +488,10 @@ void initGL(int* argc, char** argv) {
     // Basic GL state
     glDisable(GL_DEPTH_TEST);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    // Enable blend to display text
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 //-----------------------------------------------------
@@ -459,6 +501,10 @@ int main(int argc, char** argv) {
     // 1) Compute relaxation parameter
     nu = 3.0f * (U * float(nx) / Re) + 0.5f;
     omega = 1.0f / nu;
+	// Print nu and omega
+	printf("Relaxation time = %f, Omega = %f\n", nu, omega);
+	// Print U and Re
+	printf("U = %f, Re = %f\n", U, Re);
 
     // 2) Init the LBM arrays on GPU
     initialize_simulation();
