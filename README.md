@@ -2,6 +2,15 @@
 
 A GPU-accelerated Lattice Boltzmann Method (LBM) simulation with real-time OpenGL visualization using CUDA-OpenGL interop
 
+# Preview Animation
+
+Below is a real-time preview of the program's output:
+
+Parameters: Nx=Ny=512, Re=10000, U=0.3
+
+[![LBM Animation](http://img.youtube.com/vi/804kw0WLG38/0.jpg)](http://www.youtube.com/watch?v=804kw0WLG38)
+
+
 ## Platform Support
 - Windows
 - Requires NVIDIA GPU with CUDA capability
