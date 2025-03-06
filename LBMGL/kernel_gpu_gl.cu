@@ -3,6 +3,8 @@
 #include <chrono>
 #include <fstream>
 #include <iomanip>
+#include <string>
+#include <sstream>
 
 // ====== OpenGL / CUDA-OpenGL Interop ======
 #include <GL/glew.h>       // if using GLEW
@@ -10,15 +12,12 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
-#include <string>
-#include <sstream>
-
 // Time info
 int currentStep = 0;
 std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
 float updatesPerSecond = 0.0f;
 float mlups = 0.0f;
-
+float framesPerSecond = 0.0f;
 
 // Force the use of the NVIDIA GPU
 #ifdef _WIN32
@@ -51,8 +50,8 @@ DTYPE w[9] = {
     1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f
 };
 
-DTYPE U = 0.4f;
-DTYPE Re = 7000.0f;
+DTYPE U = 0.3f;
+DTYPE Re = 10000.0f;
 DTYPE nu, omega;  // nu = 3*(U*nx/Re)+0.5; omega = 1/nu
 
 // Simulation arrays (device pointers)
@@ -433,7 +432,7 @@ void display() {
     auto currentTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float> elapsedTime = currentTime - startTime;
     updatesPerSecond = float(currentStep) / elapsedTime.count();
-    float framesPerSecond = updatesPerSecond / float(stepsPerFrame);
+    framesPerSecond = updatesPerSecond / float(stepsPerFrame);
     mlups = (float(currentStep) * float(nx) * float(ny)) / (elapsedTime.count() * float(1e6));
 
     std::ostringstream oss;
