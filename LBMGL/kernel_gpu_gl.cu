@@ -312,7 +312,7 @@ void initialize_simulation() {
 
 // Runs one simulation step
 void simulation_step() {
-    dim3 blockDim(8, 8);
+    dim3 blockDim(16, 16);
     dim3 gridDim((nx + blockDim.x - 1) / blockDim.x, (ny + blockDim.y - 1) / blockDim.y);
 
     collision_kernel <<<gridDim,blockDim>>> (d_f, omega, nx, ny);
@@ -344,7 +344,7 @@ static struct cudaGraphicsResource* cuda_pbo = nullptr;
 static DTYPE* d_velocity = nullptr;                // device array for velocity magnitude
 static const int WIN_WIDTH = nx;                  // match your lattice dims
 static const int WIN_HEIGHT = ny;
-static int stepsPerFrame = 10;                  // how many LBM steps per OpenGL frame?
+static int stepsPerFrame = 40;                  // how many LBM steps per OpenGL frame?
 
 //-----------------------------------------------------
 // Create the PBO and register it with CUDA
@@ -402,7 +402,7 @@ void display() {
 		currentStep++;
     }
 
-    // 2) Compute velocity field on GPU
+    // 2) Compute velocity magnitude on GPU
     dim3 block(16, 16);
     dim3 grid((nx + block.x - 1) / block.x, (ny + block.y - 1) / block.y);
     compute_velocity_field_kernel << <grid, block >> > (d_f, d_velocity, nx, ny);
@@ -414,7 +414,7 @@ void display() {
     size_t num_bytes = 0;
     cudaGraphicsResourceGetMappedPointer((void**)&d_pbo_ptr, &num_bytes, cuda_pbo);
 
-    // 4) Fill PBO with grayscale from velocity
+    // 4) Fill PBO with color from velocity
     fill_pbo_kernel << <grid, block >> > (d_pbo_ptr, d_velocity, nx, ny, U);
     cudaDeviceSynchronize();
 
@@ -433,14 +433,18 @@ void display() {
     auto currentTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float> elapsedTime = currentTime - startTime;
     updatesPerSecond = float(currentStep) / elapsedTime.count();
+    float framesPerSecond = updatesPerSecond / float(stepsPerFrame);
     mlups = (float(currentStep) * float(nx) * float(ny)) / (elapsedTime.count() * float(1e6));
 
     std::ostringstream oss;
-    oss << "Time Step: " << currentStep << "    UPS: " << std::fixed << std::setprecision(1) << updatesPerSecond << "    MLUPS: " << std::fixed << std::setprecision(2) << mlups;
+    oss << "Time Step: " << currentStep 
+        << "  UPS: " << std::fixed << std::setprecision(1) << updatesPerSecond 
+        << "  MLUPS: " << std::fixed << std::setprecision(2) << mlups
+        << "  FPS: " << std::fixed << std::setprecision(1) << framesPerSecond;
     std::string info = oss.str();
 
 	glColor3f(1.0f, 1.0f, 1.0f); // white text
-	glRasterPos2f(-0.95f, 0.95f); // lower-right corner
+	glRasterPos2f(-0.95f, 0.95f); // upper-left corner
     for (char c : info) {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
     }
