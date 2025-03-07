@@ -29,8 +29,8 @@ extern "C" {
 //-----------------------------------------------------
 // Lattice parameters and simulation constants
 //-----------------------------------------------------
-const int nx = 512;
-const int ny = 512;
+const int nx = 1024;
+const int ny = 1024;
 const int numDirs = 9;
 typedef float DTYPE;
 
@@ -51,7 +51,7 @@ DTYPE w[9] = {
 };
 
 DTYPE U = 0.3f;
-DTYPE Re = 10000.0f;
+DTYPE Re = 35000.0f;
 DTYPE nu, omega;  // nu = 3*(U*nx/Re)+0.5; omega = 1/nu
 
 // Simulation arrays (device pointers)
@@ -428,7 +428,7 @@ void display() {
     glDrawPixels(WIN_WIDTH, WIN_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, 0);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-    // 8) Compute and display time step, update per second, and MLUPS
+    // 7) Compute and display time step, update per second, and MLUPS
     auto currentTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float> elapsedTime = currentTime - startTime;
     updatesPerSecond = float(currentStep) / elapsedTime.count();
@@ -448,7 +448,7 @@ void display() {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
     }
 
-    // 9) Swap buffers
+    // 8) Swap buffers
     glutSwapBuffers();
 }
 
@@ -474,7 +474,7 @@ void initGL(int* argc, char** argv) {
     printf("OpenGL vendor: %s\n", glGetString(GL_VENDOR));
     printf("OpenGL renderer: %s\n", glGetString(GL_RENDERER));
 
-    // (Optional) Init GLEW
+    // Initialize GLEW
     GLenum err = glewInit();
     if (GLEW_OK != err) {
         fprintf(stderr, "Error initializing GLEW: %s\n", glewGetErrorString(err));
