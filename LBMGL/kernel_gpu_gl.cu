@@ -34,17 +34,17 @@ const int ny = 1024;
 const int numDirs = 9;
 typedef float DTYPE;
 
-__device__ int cx_const[9] = { 0,  1,  0, -1,  0,  1, -1, -1,  1 };
-__device__ int cy_const[9] = { 0,  0,  1,  0, -1,  1,  1, -1, -1 };
-__device__ DTYPE w_const[9] = {
+__constant__ int cx_const[9] = { 0,  1,  0, -1,  0,  1, -1, -1,  1 };
+__constant__ int cy_const[9] = { 0,  0,  1,  0, -1,  1,  1, -1, -1 };
+__constant__ DTYPE w_const[9] = {
     4.0f / 9.0f,
     1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f,
     1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f
 };
 
-int cx[9] = { 0,  1,  0, -1,  0,  1, -1, -1,  1 };
-int cy[9] = { 0,  0,  1,  0, -1,  1,  1, -1, -1 };
-DTYPE w[9] = {
+const int cx[9] = { 0,  1,  0, -1,  0,  1, -1, -1,  1 };
+const int cy[9] = { 0,  0,  1,  0, -1,  1,  1, -1, -1 };
+const DTYPE w[9] = {
     4.0f / 9.0f,
     1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f,
     1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f
