@@ -50,7 +50,7 @@ const DTYPE w[9] = {
     1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0
 };
 
-DTYPE U = 0.3;
+DTYPE U = 0.3;  // Theoretically should be less than 0.577 (1/sqrt(3))
 DTYPE Re = 35000.0;
 DTYPE nu, tao, omega;  // nu = U*nx/Re; tao = 3*nu+0.5; omega = 1/tao
 
