@@ -320,25 +320,29 @@ void initialize_simulation() {
     delete[] h_mask;
 }
 
+//--------------------------------------------------------------------------------------------
 // Runs one simulation step
+// Since all kernel launches use the default stream, removing all the cudaDeviceSynchronize()
+// calls will not affect the correctness of the LBM calculation, but increase the performance
+//--------------------------------------------------------------------------------------------
 void simulation_step() {
     dim3 blockDim(16, 16);
     dim3 gridDim((nx + blockDim.x - 1) / blockDim.x, (ny + blockDim.y - 1) / blockDim.y);
 
     collision_kernel <<<gridDim,blockDim>>> (d_f, omega, nx, ny);
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
 
     streaming_kernel <<<gridDim,blockDim>>> (d_f, d_f_new, nx, ny);
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
 
     bounce_back_kernel <<<gridDim,blockDim>>> (d_f_new, d_mask, nx, ny);
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
 
     // Apply moving lid
     dim3 blockDim1(256);
     dim3 gridDim1((nx + blockDim1.x - 1) / blockDim1.x);
     moving_lid_kernel <<<gridDim1,blockDim1>>> (d_f_new, nx, ny, U);
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
 
     // Swap pointers
     DTYPE* temp = d_f;
@@ -354,7 +358,7 @@ static struct cudaGraphicsResource* cuda_pbo = nullptr;
 static DTYPE* d_velocity = nullptr;                // device array for velocity magnitude
 static const int WIN_WIDTH = nx;                  // match your lattice dims
 static const int WIN_HEIGHT = ny;
-static int stepsPerFrame = 40;                  // how many LBM steps per OpenGL frame?
+static int stepsPerFrame = 100;                  // how many LBM steps per OpenGL frame?
 
 //-----------------------------------------------------
 // Create the PBO and register it with CUDA
