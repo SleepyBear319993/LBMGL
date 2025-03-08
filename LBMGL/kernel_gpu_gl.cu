@@ -286,7 +286,7 @@ __global__ void fill_pbo_kernel(unsigned char* pbo_ptr,
 //-----------------------------------------------------
 // Host routines for initialization and simulation
 //-----------------------------------------------------
-void initialize_simulation() {
+void initialize_simulation(DTYPE rho0, DTYPE ux0, DTYPE uy0) {
     // Allocate device memory
     cudaMalloc(&d_f, simSize);
     cudaMalloc(&d_f_new, simSize);
@@ -296,10 +296,10 @@ void initialize_simulation() {
     DTYPE* h_f = new DTYPE[nx * ny * numDirs];
     for (int j = 0; j < ny; j++) {
         for (int i = 0; i < nx; i++) {
-            DTYPE usq = 0.0;
+            DTYPE usq = ux0 * ux0 + uy0 * uy0;
             for (int k = 0; k < numDirs; k++) {
-                DTYPE cu = DTYPE(3.0) * (cx[k] * DTYPE(0.0) + cy[k] * DTYPE(0.0));
-                h_f[idx_h(i, j, k, nx, ny)] = w[k] * DTYPE(1.0) * (DTYPE(1.0) + cu + DTYPE(0.5) * cu * cu - DTYPE(1.5) * usq);
+                DTYPE cu = DTYPE(3.0) * (cx[k] * ux0 + cy[k] * uy0);
+                h_f[idx_h(i, j, k, nx, ny)] = w[k] * rho0 * (DTYPE(1.0) + cu + DTYPE(0.5) * cu * cu - DTYPE(1.5) * usq);
             }
         }
     }
@@ -520,13 +520,16 @@ int main(int argc, char** argv) {
 	nu = U * DTYPE(nx) / Re;
     tao = DTYPE(3.0) * nu + DTYPE(0.5);
     omega = DTYPE(1.0) / tao;
+	DTYPE rho0 = 1.0;
+    DTYPE ux0 = 0.0;
+	DTYPE uy0 = 0.0;
 	// Print nu and tao and omega
 	printf("Viscosity = %f, Relaxation time = %f, Omega = %f\n", nu, tao, omega);
 	// Print U and Re
 	printf("U = %f, Re = %f\n", U, Re);
 
     // 2) Init the LBM arrays on GPU
-    initialize_simulation();
+    initialize_simulation(rho0, ux0, uy0);
 
     // 3) Init OpenGL and enter GLUT main loop
     initGL(&argc, argv);
