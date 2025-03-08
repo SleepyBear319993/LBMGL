@@ -37,21 +37,21 @@ typedef float DTYPE;
 __constant__ int cx_const[9] = { 0,  1,  0, -1,  0,  1, -1, -1,  1 };
 __constant__ int cy_const[9] = { 0,  0,  1,  0, -1,  1,  1, -1, -1 };
 __constant__ DTYPE w_const[9] = {
-    4.0f / 9.0f,
-    1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f,
-    1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f
+    4.0 / 9.0,
+    1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0,
+    1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0
 };
 
 const int cx[9] = { 0,  1,  0, -1,  0,  1, -1, -1,  1 };
 const int cy[9] = { 0,  0,  1,  0, -1,  1,  1, -1, -1 };
 const DTYPE w[9] = {
-    4.0f / 9.0f,
-    1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f,
-    1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f
+    4.0 / 9.0,
+    1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0,
+    1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0
 };
 
-DTYPE U = 0.3f;
-DTYPE Re = 35000.0f;
+DTYPE U = 0.3;
+DTYPE Re = 35000.0;
 DTYPE nu, omega;  // nu = 3*(U*nx/Re)+0.5; omega = 1/nu
 
 // Simulation arrays (device pointers)
@@ -78,24 +78,24 @@ __global__ void collision_kernel(DTYPE* f, DTYPE omega, int nx, int ny) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
     if (i < nx && j < ny) {
-        DTYPE rho = 0.0f;
-        DTYPE u_x = 0.0f;
-        DTYPE u_y = 0.0f;
+        DTYPE rho = 0.0;
+        DTYPE u_x = 0.0;
+        DTYPE u_y = 0.0;
         for (int k = 0; k < numDirs; k++) {
             DTYPE val = f[idx(i, j, k, nx, ny)];
             rho += val;
             u_x += val * cx_const[k];
             u_y += val * cy_const[k];
         }
-        if (rho > 0.0f) {
+        if (rho > 0.0) {
             u_x /= rho;
             u_y /= rho;
         }
         DTYPE usqr = u_x * u_x + u_y * u_y;
         for (int k = 0; k < numDirs; k++) {
-            DTYPE cu = 3.0f * (cx_const[k] * u_x + cy_const[k] * u_y);
-            DTYPE feq = w_const[k] * rho * (1.0f + cu + 0.5f * cu * cu - 1.5f * usqr);
-            f[idx(i, j, k, nx, ny)] = (1.0f - omega) * f[idx(i, j, k, nx, ny)] + omega * feq;
+            DTYPE cu = DTYPE(3.0) * (cx_const[k] * u_x + cy_const[k] * u_y);
+            DTYPE feq = w_const[k] * rho * (DTYPE(1.0) + cu + DTYPE(0.5) * cu * cu - DTYPE(1.5) * usqr);
+            f[idx(i, j, k, nx, ny)] = (DTYPE(1.0) - omega) * f[idx(i, j, k, nx, ny)] + omega * feq;
         }
     }
 }
@@ -175,6 +175,17 @@ __global__ void moving_lid_kernel(DTYPE* f, int nx, int ny, DTYPE U) {
     }
 }
 
+// Helper device function for sqrt
+template<typename T>
+__device__ __forceinline__ T device_sqrt(T x) {
+    if constexpr (std::is_same<T, float>::value) {
+        return sqrtf(x);
+    }
+    else {
+        return sqrt(x);
+    }
+}
+
 //-----------------------------------------------------
 // Kernel to compute velocity magnitude into a float array
 //-----------------------------------------------------
@@ -182,20 +193,20 @@ __global__ void compute_velocity_field_kernel(const DTYPE* f, DTYPE* velocity_ma
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
     if (i < nx && j < ny) {
-        DTYPE rho = 0.0f;
-        DTYPE u_x = 0.0f;
-        DTYPE u_y = 0.0f;
+        DTYPE rho = 0.0;
+        DTYPE u_x = 0.0;
+        DTYPE u_y = 0.0;
         for (int k = 0; k < numDirs; k++) {
             DTYPE val = f[idx(i, j, k, nx, ny)];
             rho += val;
             u_x += val * cx_const[k];
             u_y += val * cy_const[k];
         }
-        if (rho > 1e-12f) {
+        if (rho > DTYPE(1e-12)) {
             u_x /= rho;
             u_y /= rho;
         }
-        DTYPE vel = sqrtf(u_x * u_x + u_y * u_y);
+        DTYPE vel = device_sqrt(u_x * u_x + u_y * u_y);
         velocity_mag[i + j * nx] = vel;
     }
 }
@@ -241,7 +252,7 @@ __global__ void fill_pbo_kernel(unsigned char* pbo_ptr,
         float v = velocity_mag[i + j * nx];
 
         // Normalize velocity to [0, 1] based on U
-        float t = fminf(v / U, 1.0f); // Clamp to [0, 1]
+        float t = fminf(v / float(U), 1.0f); // Clamp to [0, 1]
 
         // Linear interpolation from blue (0, 0, 255) to red (255, 0, 0)
         //unsigned char r = (unsigned char)(t * 255.0f);          // Red increases
@@ -285,10 +296,10 @@ void initialize_simulation() {
     DTYPE* h_f = new DTYPE[nx * ny * numDirs];
     for (int j = 0; j < ny; j++) {
         for (int i = 0; i < nx; i++) {
-            DTYPE usq = 0.0f;
+            DTYPE usq = 0.0;
             for (int k = 0; k < numDirs; k++) {
-                DTYPE cu = 3.0f * (cx[k] * 0.0f + cy[k] * 0.0f);
-                h_f[idx_h(i, j, k, nx, ny)] = w[k] * 1.0f * (1.0f + cu + 0.5f * cu * cu - 1.5f * usq);
+                DTYPE cu = DTYPE(3.0) * (cx[k] * DTYPE(0.0) + cy[k] * DTYPE(0.0));
+                h_f[idx_h(i, j, k, nx, ny)] = w[k] * DTYPE(1.0) * (DTYPE(1.0) + cu + DTYPE(0.5) * cu * cu - DTYPE(1.5) * usq);
             }
         }
     }
@@ -502,8 +513,8 @@ void initGL(int* argc, char** argv) {
 //-----------------------------------------------------
 int main(int argc, char** argv) {
     // 1) Compute relaxation parameter
-    nu = 3.0f * (U * float(nx) / Re) + 0.5f;
-    omega = 1.0f / nu;
+    nu = DTYPE(3.0) * (U * float(nx) / Re) + DTYPE(0.5);
+    omega = DTYPE(1.0) / nu;
 	// Print nu and omega
 	printf("Relaxation time = %f, Omega = %f\n", nu, omega);
 	// Print U and Re
