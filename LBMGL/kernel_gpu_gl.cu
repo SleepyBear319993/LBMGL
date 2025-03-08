@@ -52,7 +52,7 @@ const DTYPE w[9] = {
 
 DTYPE U = 0.3;
 DTYPE Re = 35000.0;
-DTYPE nu, omega;  // nu = 3*(U*nx/Re)+0.5; omega = 1/nu
+DTYPE nu, tao, omega;  // nu = U*nx/Re; tao = 3*nu+0.5; omega = 1/tao
 
 // Simulation arrays (device pointers)
 DTYPE* d_f = nullptr, * d_f_new = nullptr;
@@ -513,10 +513,11 @@ void initGL(int* argc, char** argv) {
 //-----------------------------------------------------
 int main(int argc, char** argv) {
     // 1) Compute relaxation parameter
-    nu = DTYPE(3.0) * (U * float(nx) / Re) + DTYPE(0.5);
-    omega = DTYPE(1.0) / nu;
-	// Print nu and omega
-	printf("Relaxation time = %f, Omega = %f\n", nu, omega);
+	nu = U * DTYPE(nx) / Re;
+    tao = DTYPE(3.0) * nu + DTYPE(0.5);
+    omega = DTYPE(1.0) / tao;
+	// Print nu and tao and omega
+	printf("Viscosity = %f, Relaxation time = %f, Omega = %f\n", nu, tao, omega);
 	// Print U and Re
 	printf("U = %f, Re = %f\n", U, Re);
 
