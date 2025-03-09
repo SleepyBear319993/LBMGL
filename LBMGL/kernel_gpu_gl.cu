@@ -87,7 +87,7 @@ __global__ void collision_kernel(DTYPE* f, DTYPE omega, int nx, int ny) {
             u_x += val * cx_const[k];
             u_y += val * cy_const[k];
         }
-        if (rho > 0.0) {
+        if (rho > DTYPE(0.0)) {
             u_x /= rho;
             u_y /= rho;
         }
@@ -215,29 +215,6 @@ __global__ void compute_velocity_field_kernel(const DTYPE* f, DTYPE* velocity_ma
 // Kernel that copies the velocity magnitudes into RGBA
 // for display, writing directly into a CUDA-mapped buffer
 // (pbo) which has size (nx*ny*4 bytes).
-// We'll do a grayscale: R=G=B=255*vel/U, A=255.
-//-----------------------------------------------------
-//__global__ void fill_pbo_kernel(unsigned char* pbo_ptr,
-//    const DTYPE* velocity_mag,
-//    int nx, int ny,
-//    float U)
-//{
-//    int i = blockIdx.x * blockDim.x + threadIdx.x;
-//    int j = blockIdx.y * blockDim.y + threadIdx.y;
-//    if (i < nx && j < ny) {
-//        int idx_out = 4 * (i + j * nx); // RGBA
-//        float v = velocity_mag[i + j * nx];
-//
-//        // Optionally clamp or scale
-//        // float val = fminf(v / clampVal, 1.0f);  // scale velocity up to "clampVal"
-//        unsigned char c = (unsigned char)(v / U * 255.0f);
-//
-//        pbo_ptr[idx_out + 0] = c;  // R
-//        pbo_ptr[idx_out + 1] = c;  // G
-//        pbo_ptr[idx_out + 2] = c;  // B
-//        pbo_ptr[idx_out + 3] = 255;// A
-//    }
-//}
 
 // Blue to red color map
 __global__ void fill_pbo_kernel(unsigned char* pbo_ptr,
@@ -253,11 +230,6 @@ __global__ void fill_pbo_kernel(unsigned char* pbo_ptr,
 
         // Normalize velocity to [0, 1] based on U
         float t = fminf(v / float(U), 1.0f); // Clamp to [0, 1]
-
-        // Linear interpolation from blue (0, 0, 255) to red (255, 0, 0)
-        //unsigned char r = (unsigned char)(t * 255.0f);          // Red increases
-        //unsigned char g = 0;                                    // Green stays 0
-        //unsigned char b = (unsigned char)((1.0f - t) * 255.0f); // Blue decreases
 
         // Jet color bar (Blue to yellow to red color map)
         unsigned char r, g, b;
