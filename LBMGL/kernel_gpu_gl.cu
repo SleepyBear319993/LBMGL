@@ -6,10 +6,13 @@
 #include <string>
 #include <sstream>
 
+// ====== CUDA libraries ======
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
 // ====== OpenGL / CUDA-OpenGL Interop ======
 #include <GL/glew.h>       // if using GLEW
 #include <GL/freeglut.h>   // if using freeGLUT
-#include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
 // Time info
@@ -301,19 +304,19 @@ void simulation_step() {
     dim3 blockDim(16, 16);
     dim3 gridDim((nx + blockDim.x - 1) / blockDim.x, (ny + blockDim.y - 1) / blockDim.y);
 
-    collision_kernel <<<gridDim,blockDim>>> (d_f, omega, nx, ny);
+    collision_kernel <<<gridDim, blockDim>>> (d_f, omega, nx, ny);
     //cudaDeviceSynchronize();
 
-    streaming_kernel <<<gridDim,blockDim>>> (d_f, d_f_new, nx, ny);
+    streaming_kernel <<<gridDim, blockDim>>> (d_f, d_f_new, nx, ny);
     //cudaDeviceSynchronize();
 
-    bounce_back_kernel <<<gridDim,blockDim>>> (d_f_new, d_mask, nx, ny);
+    bounce_back_kernel <<<gridDim, blockDim>>> (d_f_new, d_mask, nx, ny);
     //cudaDeviceSynchronize();
 
     // Apply moving lid
     dim3 blockDim1(256);
     dim3 gridDim1((nx + blockDim1.x - 1) / blockDim1.x);
-    moving_lid_kernel <<<gridDim1,blockDim1>>> (d_f_new, nx, ny, U);
+    moving_lid_kernel <<<gridDim1, blockDim1>>> (d_f_new, nx, ny, U);
     //cudaDeviceSynchronize();
 
     // Swap pointers
@@ -391,7 +394,7 @@ void display() {
     // 2) Compute velocity magnitude on GPU
     dim3 block(16, 16);
     dim3 grid((nx + block.x - 1) / block.x, (ny + block.y - 1) / block.y);
-    compute_velocity_field_kernel << <grid, block >> > (d_f, d_velocity, nx, ny);
+    compute_velocity_field_kernel <<<grid, block>>> (d_f, d_velocity, nx, ny);
     cudaDeviceSynchronize();
 
     // 3) Map the PBO so we can write into it from CUDA
@@ -401,7 +404,7 @@ void display() {
     cudaGraphicsResourceGetMappedPointer((void**)&d_pbo_ptr, &num_bytes, cuda_pbo);
 
     // 4) Fill PBO with color from velocity
-    fill_pbo_kernel << <grid, block >> > (d_pbo_ptr, d_velocity, nx, ny, U);
+    fill_pbo_kernel <<<grid, block>>> (d_pbo_ptr, d_velocity, nx, ny, U);
     cudaDeviceSynchronize();
 
     // 5) Unmap
