@@ -1,7 +1,4 @@
-﻿#include <stdio.h>
-#include <math.h>
-#include <chrono>
-#include <fstream>
+﻿#include <chrono>
 #include <iomanip>
 #include <string>
 #include <sstream>
