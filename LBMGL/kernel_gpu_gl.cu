@@ -50,8 +50,8 @@ const DTYPE w[9] = {
     1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0
 };
 
-DTYPE U = 0.3;  // Theoretically should be less than 0.577 (1/sqrt(3))
-DTYPE Re = 35000.0;
+DTYPE U = 0.1;  // Theoretically should be less than 0.577 (1/sqrt(3))
+DTYPE Re = 1000.0;
 DTYPE nu, tao, omega;  // nu = U*nx/Re; tao = 3*nu+0.5; omega = 1/tao
 
 // Simulation arrays (device pointers)
@@ -118,6 +118,46 @@ __global__ void streaming_kernel(DTYPE* f_in, DTYPE* f_out, int nx, int ny) {
             }
         }
     }
+}
+
+__global__ void fused_collision_stream(DTYPE* f_in, DTYPE* f_out, DTYPE omega, int nx, int ny) {
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	int j = blockIdx.y * blockDim.y + threadIdx.y;
+	if (i < nx && j < ny) {
+		DTYPE rho = 0.0;
+		DTYPE u_x = 0.0;
+		DTYPE u_y = 0.0;
+		for (int k = 0; k < numDirs; k++) {
+			DTYPE val = f_in[idx(i, j, k, nx, ny)];
+			rho += val;
+			u_x += val * cx_const[k];
+			u_y += val * cy_const[k];
+		}
+		if (rho > DTYPE(0.0)) {
+			u_x /= rho;
+			u_y /= rho;
+		}
+		DTYPE usqr = u_x * u_x + u_y * u_y;
+		for (int k = 0; k < numDirs; k++) {
+			DTYPE cu = DTYPE(3.0) * (cx_const[k] * u_x + cy_const[k] * u_y);
+			DTYPE feq = w_const[k] * rho * (DTYPE(1.0) + cu + DTYPE(0.5) * cu * cu - DTYPE(1.5) * usqr);
+			f_in[idx(i, j, k, nx, ny)] = (DTYPE(1.0) - omega) * f_in[idx(i, j, k, nx, ny)] + omega * feq;
+		}
+		// Streaming
+		if (i > 0 && i < nx - 1 && j > 0 && j < ny - 1) {
+			for (int k = 0; k < numDirs; k++) {
+				int ip = i + cx_const[k];
+				int jp = j + cy_const[k];
+				f_out[idx(ip, jp, k, nx, ny)] = f_in[idx(i, j, k, nx, ny)];
+			}
+		}
+		//else {
+		//	// For simplicity, no wrap-around. Just copy as-is at borders
+		//	for (int k = 0; k < numDirs; k++) {
+		//		f_out[idx(i, j, k, nx, ny)] = f_in[idx(i, j, k, nx, ny)];
+		//	}
+		//}
+	}
 }
 
 __global__ void bounce_back_kernel(DTYPE* f, char* mask, int nx, int ny) {
@@ -301,11 +341,13 @@ void simulation_step() {
     dim3 blockDim(16, 16);
     dim3 gridDim((nx + blockDim.x - 1) / blockDim.x, (ny + blockDim.y - 1) / blockDim.y);
 
-    collision_kernel <<<gridDim, blockDim>>> (d_f, omega, nx, ny);
+    //collision_kernel <<<gridDim, blockDim>>> (d_f, omega, nx, ny);
     //cudaDeviceSynchronize();
 
-    streaming_kernel <<<gridDim, blockDim>>> (d_f, d_f_new, nx, ny);
+    //streaming_kernel <<<gridDim, blockDim>>> (d_f, d_f_new, nx, ny);
     //cudaDeviceSynchronize();
+
+	fused_collision_stream << <gridDim, blockDim >> > (d_f, d_f_new, omega, nx, ny);
 
     bounce_back_kernel <<<gridDim, blockDim>>> (d_f_new, d_mask, nx, ny);
     //cudaDeviceSynchronize();
