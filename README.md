@@ -25,7 +25,7 @@ Parameters: Nx=Ny=1024, Re=35000, U=0.3
    - Download from: https://visualstudio.microsoft.com/downloads/
    - Install with "Desktop development with C++" workload
 
-2. **NVIDIA CUDA Toolkit 12.8**
+2. **NVIDIA CUDA Toolkit 12.9**
    - Download from: https://developer.nvidia.com/cuda-downloads
    - Ensure your GPU supports CUDA
    - Install the toolkit with Visual Studio integration
