@@ -36,12 +36,14 @@ Parameters: Nx=Ny=1024, Re=35000, U=0.3
    Install GLEW and FreeGLUT by vcpkg:
 
      `git clone https://github.com/Microsoft/vcpkg.git`
+        
+     `cd vcpkg`
      
-     `.\vcpkg\bootstrap-vcpkg.bat`
+     `.\bootstrap-vcpkg.bat`
    
-     `vcpkg integrate install`
+     `.\vcpkg integrate install`
    
-     `vcpkg install glew:x64-windows`
+     `.\vcpkg install glew:x64-windows`
    
-     `vcpkg install freeglut:x64-windows`
+     `.\vcpkg install freeglut:x64-windows`
    
