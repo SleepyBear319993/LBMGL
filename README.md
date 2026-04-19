@@ -21,15 +21,15 @@ Parameters: Nx=Ny=1024, Re=35000, U=0.3
 ## Prerequisites
 
 ### Required Software
-1. **Visual Studio 2022**
+1. **Visual Studio 2026**
    - Download from: https://visualstudio.microsoft.com/downloads/
    - Install with "Desktop development with C++" workload
 
-2. **NVIDIA CUDA Toolkit 12.9**
+2. **NVIDIA CUDA Toolkit 13.2**
    - Download from: https://developer.nvidia.com/cuda-downloads
    - Ensure your GPU supports CUDA
    - Install the toolkit with Visual Studio integration
-   - Ensure that CUDA Toolkit 12.4 or higher is installed to be compatible with Visual Studio 2022 17.10 or higher
+   - Ensure that CUDA Toolkit 13.2 or higher is installed to be compatible with Visual Studio 2026
 
 3. **GLEW and FreeGLUT**
    
